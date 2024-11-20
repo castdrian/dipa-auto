@@ -53,7 +53,7 @@ END
 
 if [ -n "$GITHUB_ACTIONS" ]; then
     echo "🧪 Running in GitHub Actions environment..."
-    GITHUB_PAT="$github_token" python3 "$SCRIPT_DIR/mock_test.py"
+    REPO_PAT="$github_token" python3 "$SCRIPT_DIR/mock_test.py"
     exit 0
 fi
 
@@ -64,7 +64,7 @@ After=network.target
 [Service]
 Type=simple
 User=$USER
-Environment=GITHUB_PAT=$github_token
+Environment=REPO_PAT=$github_token
 WorkingDirectory=$SCRIPT_DIR
 ExecStart=$SCRIPT_DIR/$VENV_DIR/bin/python3 -m dipa_auto.checker
 Restart=always

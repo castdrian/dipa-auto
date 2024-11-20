@@ -16,7 +16,7 @@ logging.basicConfig(
 class DipaChecker:
     def __init__(self, mock_hash=None):
         self.base_url = "https://ipa.aspy.dev/discord"
-        self.github_token = os.getenv("GITHUB_PAT")
+        self.github_token = os.getenv("REPO_PAT")
         self.hash_file = Path("/var/lib/dipa-auto/branch_hashes.json")
         self.hash_file.parent.mkdir(parents=True, exist_ok=True)
         self.mock_hash = mock_hash
