@@ -23,5 +23,5 @@ jobs:
       env:
         GITHUB_PAT: ${{ secrets.GITHUB_PAT }}
       run: |
-        chmod +x setup.sh
-        ./setup.sh "$GITHUB_PAT"
+        sudo chmod +x setup.sh
+        sudo ./setup.sh "$GITHUB_PAT"
