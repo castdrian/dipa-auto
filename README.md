@@ -11,5 +11,5 @@ A Linux service that monitors Discord IPA releases and triggers automated workfl
 
 ## License
 
-© Adrian Castro 2024. All rights reserved.
+© Adrian Castro 2024. All rights reserved.\
 © magic-ipa-source-caddy-server person 2024. All rights reserved.

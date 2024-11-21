@@ -14,12 +14,13 @@ logging.basicConfig(
 )
 
 class DipaChecker:
-    def __init__(self, mock_hash=None):
+    def __init__(self, mock_hash=None, repo_name=None):
         self.base_url = "https://ipa.aspy.dev/discord"
         self.github_token = os.getenv("REPO_PAT")
         self.hash_file = Path("/var/lib/dipa-auto/branch_hashes.json")
         self.hash_file.parent.mkdir(parents=True, exist_ok=True)
         self.mock_hash = mock_hash
+        self.repo_name = repo_name or "bunny-mod/BunnyTweak"
         self.load_hashes()
 
     def load_hashes(self):
@@ -30,10 +31,6 @@ class DipaChecker:
                     self.branch_hashes["stable"] = self.mock_hash
         else:
             self.branch_hashes = {"stable": None, "testflight": None}
-
-    def save_hashes(self):
-        with open(self.hash_file, 'w') as f:
-            json.dump(self.branch_hashes, f)
 
     def fetch_ipa_list(self, branch):
         response = requests.get(
@@ -58,13 +55,14 @@ class DipaChecker:
         
         logging.info(f"Dispatching workflow for {ipa_url}")
         response = requests.post(
-            "https://api.github.com/repos/castdrian/apt-repo/dispatches",
+            f"https://api.github.com/repos/{self.repo_name}/dispatches",
             headers={
-                "Accept": "application/vnd.github.v3+json",
-                "Authorization": f"token {self.github_token}"
+                "Accept": "application/vnd.github+json",
+                "Authorization": f"Bearer {self.github_token}",
+                "X-GitHub-Api-Version": "2022-11-28"
             },
             json={
-                "event_type": "package-update",
+                "event_type": "ipa-update",
                 "client_payload": {
                     "ipa_url": ipa_url,
                     "is_testflight": str(is_testflight).lower()

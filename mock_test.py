@@ -23,7 +23,10 @@ def test_new_version_detection():
         with patch('requests.post') as mock_post:
             mock_post.return_value.status_code = 204
             
-            checker = DipaChecker(mock_hash="different_hash_to_trigger_update")
+            checker = DipaChecker(
+                mock_hash="different_hash_to_trigger_update",
+                repo_name="castdrian/PyoncordTweak"
+            )
             
             checker.branch_hashes = {
                 "stable": "old_hash_stable",
@@ -32,7 +35,21 @@ def test_new_version_detection():
             
             print("Testing stable branch...")
             assert checker.check_branch("stable"), "Stable branch check failed"
-            assert mock_post.called, "GitHub workflow was not dispatched for stable"
+            mock_post.assert_called_with(
+                "https://api.github.com/repos/castdrian/PyoncordTweak/dispatches",
+                headers={
+                    "Accept": "application/vnd.github+json",
+                    "Authorization": f"Bearer {checker.github_token}",
+                    "X-GitHub-Api-Version": "2022-11-28"
+                },
+                json={
+                    "event_type": "ipa-update",
+                    "client_payload": {
+                        "ipa_url": "https://ipa.aspy.dev/discord/stable/Discord_255.0.ipa",
+                        "is_testflight": "false"
+                    }
+                }
+            )
             
             print("Testing testflight branch...")
             mock_post.reset_mock()
