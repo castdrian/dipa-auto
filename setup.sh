@@ -62,7 +62,7 @@ Type=simple
 User=$USER
 Environment="REPO_PAT=$github_token"
 WorkingDirectory=$SCRIPT_DIR
-ExecStart=$SCRIPT_DIR/$VENV_DIR/bin/python3 -m dipa_auto.py
+ExecStart=$SCRIPT_DIR/$VENV_DIR/bin/python3 -m dipa_auto
 Restart=always
 RestartSec=10
 
