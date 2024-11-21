@@ -65,7 +65,7 @@ class DipaChecker:
                 "event_type": "ipa-update",
                 "client_payload": {
                     "ipa_url": ipa_url,
-                    "is_testflight": str(is_testflight).lower()
+                    "is_testflight": is_testflight
                 }
             }
         )
