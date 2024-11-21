@@ -28,8 +28,12 @@ pip install requests
 sudo mkdir -p "$HASH_DIR"
 sudo chown -R $USER:$USER "$HASH_DIR"
 
-echo "📝 Creating initial branch hashes..."
-python3 << END
+echo "📝 Checking branch hashes..."
+if [ -f "$HASH_DIR/branch_hashes.json" ]; then
+    echo "✨ Using existing branch hashes"
+else
+    echo "📝 Creating initial branch hashes..."
+    python3 << END
 import requests
 import json
 import hashlib
@@ -50,6 +54,7 @@ hashes = {
 with open("$HASH_DIR/branch_hashes.json", "w") as f:
     json.dump(hashes, f)
 END
+fi
 
 echo "📝 Creating systemd service..."
 cat > /tmp/dipa-auto.service << END
