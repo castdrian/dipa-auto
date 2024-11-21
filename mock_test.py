@@ -2,6 +2,7 @@ import json
 import os
 from unittest.mock import patch, MagicMock
 from dipa_auto import DipaChecker
+import logging
 
 def test_new_version_detection():
     mock_response = [
@@ -26,13 +27,15 @@ def test_new_version_detection():
             
             print("Testing stable branch...")
             assert checker.check_branch("stable"), "Stable branch check failed"
-            assert mock_post.called, "GitHub workflow was not dispatched"
+            assert mock_post.called, "GitHub workflow was not dispatched for stable"
             
             print("Testing testflight branch...")
             mock_post.reset_mock()
             assert checker.check_branch("testflight"), "Testflight branch check failed"
+            assert mock_post.called, "GitHub workflow was not dispatched for testflight"
             
             print("✅ All tests passed successfully")
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     test_new_version_detection() 
