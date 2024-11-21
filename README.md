@@ -11,6 +11,12 @@ A Linux service that monitors Discord IPA releases and triggers automated workfl
 - Automatic GitHub workflow dispatch
 - Systemd service integration
 
+## Setup
+```sh
+git clone https://github.com/castdrian/dipa-auto
+cd dipa-auto && sudo chmod +x setup.sh && sudo ./setup.sh "github_pat_..."
+```
+
 ## License
 
 © Adrian Castro 2024. All rights reserved.\
