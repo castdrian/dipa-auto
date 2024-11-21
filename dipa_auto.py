@@ -31,6 +31,10 @@ class DipaChecker:
         else:
             self.branch_hashes = {"stable": None, "testflight": None}
 
+    def save_hashes(self):
+        with open(self.hash_file, 'w') as f:
+            json.dump(self.branch_hashes, f)
+
     def fetch_ipa_list(self, branch):
         response = requests.get(
             f"{self.base_url}/{branch}/",
@@ -60,7 +64,7 @@ class DipaChecker:
                 "Authorization": f"token {self.github_token}"
             },
             json={
-                "event_type": "ipa-update",
+                "event_type": "package-update",
                 "client_payload": {
                     "ipa_url": ipa_url,
                     "is_testflight": str(is_testflight).lower()
