@@ -25,6 +25,11 @@ def test_new_version_detection():
             
             checker = DipaChecker(mock_hash="different_hash_to_trigger_update")
             
+            checker.branch_hashes = {
+                "stable": "old_hash_stable",
+                "testflight": "old_hash_testflight"
+            }
+            
             print("Testing stable branch...")
             assert checker.check_branch("stable"), "Stable branch check failed"
             assert mock_post.called, "GitHub workflow was not dispatched for stable"
