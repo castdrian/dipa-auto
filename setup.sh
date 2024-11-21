@@ -51,37 +51,38 @@ with open("$HASH_DIR/branch_hashes.json", "w") as f:
     json.dump(hashes, f)
 END
 
-if [ -n "$GITHUB_ACTIONS" ]; then
-    echo "🧪 Running in GitHub Actions environment..."
-    REPO_PAT="$github_token" python3 "$SCRIPT_DIR/mock_test.py"
-    exit 0
-fi
-
-SERVICE_CONTENT="[Unit]
+echo "📝 Creating systemd service..."
+cat > /tmp/dipa-auto.service << END
+[Unit]
 Description=dipa-auto service
 After=network.target
 
 [Service]
 Type=simple
 User=$USER
-Environment=REPO_PAT=$github_token
+Environment="REPO_PAT=$github_token"
 WorkingDirectory=$SCRIPT_DIR
-ExecStart=$SCRIPT_DIR/$VENV_DIR/bin/python3 -m dipa_auto.checker
+ExecStart=$SCRIPT_DIR/$VENV_DIR/bin/python3 -m dipa_auto.py
 Restart=always
 RestartSec=10
 
 [Install]
-WantedBy=multi-user.target"
+WantedBy=multi-user.target
+END
 
-echo "📝 Creating systemd service file..."
-echo "$SERVICE_CONTENT" | sudo tee "/etc/systemd/system/$SERVICE_NAME.service" > /dev/null
+if [ -f "/etc/systemd/system/$SERVICE_NAME.service" ]; then
+    echo "🔄 Updating existing service..."
+    sudo systemctl stop $SERVICE_NAME
+else
+    echo "✨ Creating new service..."
+fi
 
-echo "🔄 Reloading systemd daemon..."
+sudo mv /tmp/dipa-auto.service /etc/systemd/system/
 sudo systemctl daemon-reload
+sudo systemctl enable $SERVICE_NAME
+sudo systemctl start $SERVICE_NAME
 
-echo "▶️ Starting service..."
-sudo systemctl enable "$SERVICE_NAME"
-sudo systemctl start "$SERVICE_NAME"
-
-echo "✅ Setup complete!"
+echo "✅ Service installed and started successfully!"
+echo "📊 Check status with: sudo systemctl status $SERVICE_NAME"
+echo "📜 View logs with: sudo journalctl -u $SERVICE_NAME -f"
 
