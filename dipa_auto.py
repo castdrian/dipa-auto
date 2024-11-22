@@ -96,6 +96,10 @@ class DipaChecker:
             return False
         return True
 
+    def save_hashes(self):
+        with open(self.hash_file, "w") as f:
+            json.dump(self.branch_hashes, f)
+
     def run(self):
         while True:
             if not self.check_branch("stable"):
