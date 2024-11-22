@@ -102,17 +102,13 @@ class DipaChecker:
 
     def run(self):
         while True:
-            if not self.check_branch("stable"):
-                time.sleep(3600)
-                continue
+            current_time = datetime.now()
+            seconds_until_next_hour = 3600 - (current_time.minute * 60 + current_time.second)
             
-            time.sleep(300)
+            self.check_branch("stable")
+            self.check_branch("testflight")
             
-            if not self.check_branch("testflight"):
-                time.sleep(3300)
-                continue
-                
-            time.sleep(3300)
+            time.sleep(seconds_until_next_hour)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
