@@ -1,0 +1,9 @@
+# GitHub Personal Access Token
+github_token = ""
+
+# IPA Service Configuration
+ipa_base_url = "https://ipa.aspy.dev/discord"
+repo_name = "castdrian/PyoncordTweak"
+
+# Service Configuration
+refresh_interval = 3600 

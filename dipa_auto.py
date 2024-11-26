@@ -5,6 +5,7 @@ import time
 import os
 import logging
 import hashlib
+import tomli
 from datetime import datetime
 from pathlib import Path
 
@@ -14,14 +15,26 @@ logging.basicConfig(
 )
 
 class DipaChecker:
-    def __init__(self, mock_hash=None, repo_name=None):
-        self.base_url = "https://ipa.aspy.dev/discord"
-        self.github_token = os.getenv("REPO_PAT")
+    def __init__(self, mock_hash=None):
+        self.config_path = os.getenv("CONFIG_PATH", "config.toml")
+        self.load_config()
+        
         self.hash_file = Path("/var/lib/dipa-auto/branch_hashes.json")
         self.hash_file.parent.mkdir(parents=True, exist_ok=True)
         self.mock_hash = mock_hash
-        self.repo_name = repo_name or "bunny-mod/BunnyTweak"
         self.load_hashes()
+
+    def load_config(self):
+        try:
+            with open(self.config_path, "rb") as f:
+                config = tomli.load(f)
+            self.base_url = config["ipa_base_url"]
+            self.github_token = config["github_token"]
+            self.repo_name = config["repo_name"]
+            self.refresh_interval = config["refresh_interval"]
+        except Exception as e:
+            logging.error(f"Error loading config: {e}")
+            raise
 
     def load_hashes(self):
         if self.hash_file.exists():
@@ -102,13 +115,10 @@ class DipaChecker:
 
     def run(self):
         while True:
-            current_time = datetime.now()
-            seconds_until_next_hour = 3600 - (current_time.minute * 60 + current_time.second)
-            
             self.check_branch("stable")
             self.check_branch("testflight")
             
-            time.sleep(seconds_until_next_hour)
+            time.sleep(self.refresh_interval)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

@@ -12,18 +12,33 @@ VENV_DIR="venv"
 SERVICE_NAME="dipa-auto"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 HASH_DIR="/var/lib/dipa-auto"
+CONFIG_FILE="$SCRIPT_DIR/config.toml"
 
-if [ "$1" ]; then
-    github_token="$1"
-else
-    read -sp "GitHub PAT: " github_token
-    echo
+if [ ! -f "$CONFIG_FILE" ]; then
+    echo "❌ Config file not found at $CONFIG_FILE"
+    exit 1
 fi
 
 python3 -m venv "$VENV_DIR"
 source "$VENV_DIR/bin/activate"
 
-pip install requests
+pip install requests tomli
+
+echo "📝 Validating config..."
+python3 << END
+import tomli
+import sys
+
+try:
+    with open("$CONFIG_FILE", "rb") as f:
+        config = tomli.load(f)
+    if not config.get("github_token"):
+        print("❌ GitHub token not found in config file")
+        sys.exit(1)
+except Exception as e:
+    print(f"❌ Error reading config file: {e}")
+    sys.exit(1)
+END
 
 sudo mkdir -p "$HASH_DIR"
 sudo chown -R $USER:$USER "$HASH_DIR"
@@ -37,10 +52,14 @@ else
 import requests
 import json
 import hashlib
+import tomli
+
+with open("$CONFIG_FILE", "rb") as f:
+    config = tomli.load(f)
 
 def get_branch_hash(branch):
     response = requests.get(
-        f"https://ipa.aspy.dev/discord/{branch}/",
+        f"{config['ipa_base_url']}/{branch}/",
         headers={"Accept": "application/json"}
     )
     data = response.json()
@@ -65,7 +84,7 @@ After=network.target
 [Service]
 Type=simple
 User=$USER
-Environment="REPO_PAT=$github_token"
+Environment="CONFIG_PATH=$CONFIG_FILE"
 WorkingDirectory=$SCRIPT_DIR
 ExecStart=$SCRIPT_DIR/$VENV_DIR/bin/python3 -m dipa_auto
 Restart=always
