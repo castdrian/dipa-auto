@@ -18,7 +18,7 @@ logging.basicConfig(
 CONFIG_SCHEMA = zon.record({
     "github_token": zon.string().min(1),
     "ipa_base_url": zon.string().url(),
-    "repo_name": zon.string().regex(r"^[a-zA-Z0-9-]+/[a-zA-Z0-9-]+$"),
+    "github_repo": zon.string().regex(r"^[a-zA-Z0-9-]+/[a-zA-Z0-9-]+$"),
     "refresh_interval": zon.number().int().positive()
 })
 
@@ -42,7 +42,7 @@ class DipaChecker:
             
             self.base_url = validated_config["ipa_base_url"]
             self.github_token = validated_config["github_token"]
-            self.repo_name = validated_config["repo_name"]
+            self.github_repo = validated_config["github_repo"]
             self.refresh_interval = validated_config["refresh_interval"]
             
         except zon.error.ZonError as e:
@@ -84,7 +84,7 @@ class DipaChecker:
         
         logging.info(f"Dispatching workflow for {ipa_url}")
         response = requests.post(
-            f"https://api.github.com/repos/{self.repo_name}/dispatches",
+            f"https://api.github.com/repos/{self.github_repo}/dispatches",
             headers={
                 "Accept": "application/vnd.github+json",
                 "Authorization": f"Bearer {self.github_token}",

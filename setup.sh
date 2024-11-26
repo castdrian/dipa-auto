@@ -45,7 +45,7 @@ import sys
 CONFIG_SCHEMA = zon.record({
     "github_token": zon.string().min(1),
     "ipa_base_url": zon.string().url(),
-    "repo_name": zon.string().regex(r"^[a-zA-Z0-9-]+/[a-zA-Z0-9-]+$"),
+    "github_repo": zon.string().regex(r"^[a-zA-Z0-9-]+/[a-zA-Z0-9-]+$"),
     "refresh_interval": zon.number().int().positive()
 })
 

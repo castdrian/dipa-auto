@@ -3,7 +3,7 @@ github_token = ""
 
 # IPA Service Configuration
 ipa_base_url = "https://ipa.aspy.dev/discord"
-repo_name = "castdrian/PyoncordTweak"
+github_repo = "castdrian/PyoncordTweak"
 
 # Service Configuration
 refresh_interval = 3600 
