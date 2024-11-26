@@ -15,7 +15,7 @@ A Linux service that monitors Discord IPA releases and triggers automated workfl
 
 ```sh
 git clone https://github.com/castdrian/dipa-auto
-cd dipa-auto && sudo chmod +x setup.sh && sudo ./setup.sh "github_pat_..."
+cd dipa-auto && sudo chmod +x setup.sh && sudo ./setup.sh
 ```
 
 ## License
