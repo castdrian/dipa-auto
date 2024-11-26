@@ -4,8 +4,20 @@ set -e
 echo "🚀 Setting up dipa-auto..."
 
 if ! command -v python3 &> /dev/null; then
-    echo "❌ Python 3 is required but not installed."
-    exit 1
+    echo "📦 Python 3 not found, installing..."
+    if command -v apt &> /dev/null; then
+        sudo apt update
+        sudo apt install -y python3 python3-venv
+    elif command -v dnf &> /dev/null; then
+        sudo dnf install -y python3 python3-venv
+    elif command -v pacman &> /dev/null; then
+        sudo pacman -Sy python python-venv
+    elif command -v brew &> /dev/null; then
+        brew install python
+    else
+        echo "❌ Could not find a package manager to install Python. Please install Python 3 manually."
+        exit 1
+    fi
 fi
 
 VENV_DIR="venv"
