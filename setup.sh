@@ -22,21 +22,28 @@ fi
 python3 -m venv "$VENV_DIR"
 source "$VENV_DIR/bin/activate"
 
-pip install requests tomli
+pip install requests tomli zon
 
 echo "📝 Validating config..."
 python3 << END
 import tomli
+import zon
 import sys
+
+CONFIG_SCHEMA = zon.record({
+    "github_token": zon.string().min(1),
+    "ipa_base_url": zon.string().url(),
+    "repo_name": zon.string().regex(r"^[a-zA-Z0-9-]+/[a-zA-Z0-9-]+$"),
+    "refresh_interval": zon.number().int().positive()
+})
 
 try:
     with open("$CONFIG_FILE", "rb") as f:
         config = tomli.load(f)
-    if not config.get("github_token"):
-        print("❌ GitHub token not found in config file")
-        sys.exit(1)
+    CONFIG_SCHEMA.validate(config)
+    print("✅ Config validation successful")
 except Exception as e:
-    print(f"❌ Error reading config file: {e}")
+    print(f"❌ Config validation failed: {e}")
     sys.exit(1)
 END
 

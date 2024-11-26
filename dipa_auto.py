@@ -6,6 +6,7 @@ import os
 import logging
 import hashlib
 import tomli
+import zon
 from datetime import datetime
 from pathlib import Path
 
@@ -13,6 +14,13 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
+
+CONFIG_SCHEMA = zon.record({
+    "github_token": zon.string().min(1),
+    "ipa_base_url": zon.string().url(),
+    "repo_name": zon.string().regex(r"^[a-zA-Z0-9-]+/[a-zA-Z0-9-]+$"),
+    "refresh_interval": zon.number().int().positive()
+})
 
 class DipaChecker:
     def __init__(self, mock_hash=None):
@@ -28,10 +36,18 @@ class DipaChecker:
         try:
             with open(self.config_path, "rb") as f:
                 config = tomli.load(f)
-            self.base_url = config["ipa_base_url"]
-            self.github_token = config["github_token"]
-            self.repo_name = config["repo_name"]
-            self.refresh_interval = config["refresh_interval"]
+            
+            # Validate config using zon
+            validated_config = CONFIG_SCHEMA.validate(config)
+            
+            self.base_url = validated_config["ipa_base_url"]
+            self.github_token = validated_config["github_token"]
+            self.repo_name = validated_config["repo_name"]
+            self.refresh_interval = validated_config["refresh_interval"]
+            
+        except zon.error.ZonError as e:
+            logging.error(f"Config validation failed: {e}")
+            raise
         except Exception as e:
             logging.error(f"Error loading config: {e}")
             raise
