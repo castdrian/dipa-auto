@@ -43,10 +43,12 @@ import zon
 import sys
 
 CONFIG_SCHEMA = zon.record({
-    "github_token": zon.string().min(1),
     "ipa_base_url": zon.string().url(),
-    "github_repo": zon.string().regex(r"^[a-zA-Z0-9-]+/[a-zA-Z0-9-]+$"),
-    "refresh_interval": zon.number().int().positive()
+    "refresh_interval": zon.number().int().positive(),
+    "targets": zon.array(zon.record({
+        "github_token": zon.string().regex(r"^(gh[ps]_[a-zA-Z0-9]{36}|github_pat_[a-zA-Z0-9]{22}_[a-zA-Z0-9]{59})$"),
+        "github_repo": zon.string().regex(r"^[a-zA-Z0-9-]+/[a-zA-Z0-9-]+$")
+    })).min(1)
 })
 
 try:
@@ -84,13 +86,14 @@ def get_branch_hash(branch):
     data = response.json()
     return hashlib.sha256(json.dumps(data, sort_keys=True).encode()).hexdigest()
 
-hashes = {
-    "stable": get_branch_hash("stable"),
-    "testflight": get_branch_hash("testflight")
-}
-
-with open("$HASH_DIR/branch_hashes.json", "w") as f:
-    json.dump(hashes, f)
+# Only create hashes if they don't exist
+if not os.path.exists("$HASH_DIR/branch_hashes.json"):
+    hashes = {
+        "stable": get_branch_hash("stable"),
+        "testflight": get_branch_hash("testflight")
+    }
+    with open("$HASH_DIR/branch_hashes.json", "w") as f:
+        json.dump(hashes, f)
 END
 fi
 
@@ -128,4 +131,3 @@ sudo systemctl start $SERVICE_NAME
 echo "✅ Service installed and started successfully!"
 echo "📊 Check status with: sudo systemctl status $SERVICE_NAME"
 echo "📜 View logs with: sudo journalctl -u $SERVICE_NAME -f"
-

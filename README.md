@@ -7,7 +7,7 @@ A Linux service that monitors Discord IPA releases and triggers automated workfl
 ## Features
 
 - Monitors both stable and testflight branches
-- Hourly checks for new versions
+- Timed checks for new versions
 - Automatic GitHub workflow dispatch
 - Systemd service integration
 

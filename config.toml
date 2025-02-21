@@ -1,9 +1,14 @@
-# GitHub Personal Access Token
-github_token = ""
-
 # IPA Service Configuration
 ipa_base_url = "https://ipa.aspy.dev/discord"
-github_repo = "castdrian/PyoncordTweak"
 
 # Service Configuration
-refresh_interval = 3600 
+refresh_interval = 900 # 15 minutes
+
+# Target Repo Configuration
+[[targets]]
+github_repo = "castdrian/PyoncordTweak"
+github_token = ""
+
+[[targets]]
+github_repo = "unbound-app/loader-ios"
+github_token = ""

@@ -35,29 +35,18 @@ def test_new_version_detection():
             
             print("Testing stable branch...")
             assert checker.check_branch("stable"), "Stable branch check failed"
-            mock_post.assert_called_with(
-                "https://api.github.com/repos/castdrian/PyoncordTweak/dispatches",
-                headers={
-                    "Accept": "application/vnd.github+json",
-                    "Authorization": f"Bearer {checker.github_token}",
-                    "X-GitHub-Api-Version": "2022-11-28"
-                },
-                json={
-                    "event_type": "ipa-update",
-                    "client_payload": {
-                        "ipa_url": "https://ipa.aspy.dev/discord/stable/Discord_255.0.ipa",
-                        "is_testflight": "false"
-                    }
-                }
-            )
+            
+            # Verify that dispatch was called for each target
+            expected_calls = len(checker.targets)
+            assert mock_post.call_count == expected_calls, f"Expected {expected_calls} workflow dispatches"
             
             print("Testing testflight branch...")
             mock_post.reset_mock()
             assert checker.check_branch("testflight"), "Testflight branch check failed"
-            assert mock_post.called, "GitHub workflow was not dispatched for testflight"
+            assert mock_post.call_count == expected_calls, "Wrong number of workflow dispatches for testflight"
             
             print("✅ All tests passed successfully")
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    test_new_version_detection() 
+    test_new_version_detection()

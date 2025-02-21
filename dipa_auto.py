@@ -16,10 +16,12 @@ logging.basicConfig(
 )
 
 CONFIG_SCHEMA = zon.record({
-    "github_token": zon.string().min(1),
     "ipa_base_url": zon.string().url(),
-    "github_repo": zon.string().regex(r"^[a-zA-Z0-9-]+/[a-zA-Z0-9-]+$"),
-    "refresh_interval": zon.number().int().positive()
+    "refresh_interval": zon.number().int().positive(),
+    "targets": zon.array(zon.record({
+        "github_token": zon.string().regex(r"^(gh[ps]_[a-zA-Z0-9]{36}|github_pat_[a-zA-Z0-9]{22}_[a-zA-Z0-9]{59})$"),
+        "github_repo": zon.string().regex(r"^[a-zA-Z0-9-]+/[a-zA-Z0-9-]+$")
+    })).min(1)
 })
 
 class DipaChecker:
@@ -41,9 +43,8 @@ class DipaChecker:
             validated_config = CONFIG_SCHEMA.validate(config)
             
             self.base_url = validated_config["ipa_base_url"]
-            self.github_token = validated_config["github_token"]
-            self.github_repo = validated_config["github_repo"]
             self.refresh_interval = validated_config["refresh_interval"]
+            self.targets = validated_config["targets"]
             
         except zon.error.ZonError as e:
             logging.error(f"Config validation failed: {e}")
@@ -79,26 +80,31 @@ class DipaChecker:
         return max(ipa_list, key=lambda x: x["mod_time"])
 
     def dispatch_github_workflow(self, ipa_url, is_testflight):
-        if not self.github_token:
-            raise Exception("GitHub token not found")
-        
-        logging.info(f"Dispatching workflow for {ipa_url}")
-        response = requests.post(
-            f"https://api.github.com/repos/{self.github_repo}/dispatches",
-            headers={
-                "Accept": "application/vnd.github+json",
-                "Authorization": f"Bearer {self.github_token}",
-                "X-GitHub-Api-Version": "2022-11-28"
-            },
-            json={
-                "event_type": "ipa-update",
-                "client_payload": {
-                    "ipa_url": ipa_url,
-                    "is_testflight": is_testflight
-                }
-            }
-        )
-        return response.status_code == 204
+        success = True
+        for target in self.targets:
+            logging.info(f"Dispatching workflow for {ipa_url} to {target['github_repo']}")
+            try:
+                response = requests.post(
+                    f"https://api.github.com/repos/{target['github_repo']}/dispatches",
+                    headers={
+                        "Accept": "application/vnd.github+json",
+                        "Authorization": f"Bearer {target['github_token']}",
+                    },
+                    json={
+                        "event_type": "ipa-update",
+                        "client_payload": {
+                            "ipa_url": ipa_url,
+                            "is_testflight": is_testflight
+                        }
+                    }
+                )
+                if response.status_code != 204:
+                    logging.error(f"Failed to dispatch workflow to {target['github_repo']}")
+                    success = False
+            except Exception as e:
+                logging.error(f"Error dispatching to {target['github_repo']}: {str(e)}")
+                success = False
+        return success
 
     def check_branch(self, branch):
         logging.info(f"Checking {branch} branch...")
@@ -142,4 +148,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     checker = DipaChecker(args.mock_hash)
-    checker.run() 
+    checker.run()
