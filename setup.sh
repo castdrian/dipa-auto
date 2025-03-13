@@ -39,23 +39,44 @@ pip install requests tomli zon
 echo "📝 Validating config..."
 python3 << END
 import tomli
-import zon
 import sys
+import os
 
-CONFIG_SCHEMA = zon.record({
-    "ipa_base_url": zon.string().url(),
-    "refresh_interval": zon.number().int().positive(),
-    "targets": zon.list(zon.record({
-        "github_token": zon.string().regex(r"^(gh[ps]_[a-zA-Z0-9]{36}|github_pat_[a-zA-Z0-9]{22}_[a-zA-Z0-9]{59})$"),
-        "github_repo": zon.string().regex(r"^[a-zA-Z0-9-]+/[a-zA-Z0-9-]+$")
-    })).min(1)
-})
-
+# First check if we can import from dipa_auto
 try:
+    sys.path.append("$SCRIPT_DIR")
+    from dipa_auto import CONFIG_SCHEMA
+    
     with open("$CONFIG_FILE", "rb") as f:
         config = tomli.load(f)
     CONFIG_SCHEMA.validate(config)
     print("✅ Config validation successful")
+except ImportError:
+    print("⚠️ Could not import schema from dipa_auto, using direct validation")
+    import zon
+    
+    try:
+        with open("$CONFIG_FILE", "rb") as f:
+            config = tomli.load(f)
+            
+        # Basic validation without using specific zon methods
+        if not isinstance(config.get("ipa_base_url"), str):
+            raise ValueError("ipa_base_url must be a string")
+        if not isinstance(config.get("refresh_interval"), int) or config["refresh_interval"] <= 0:
+            raise ValueError("refresh_interval must be a positive integer")
+        if not isinstance(config.get("targets"), list) or len(config["targets"]) < 1:
+            raise ValueError("targets must be an array with at least one item")
+            
+        for target in config["targets"]:
+            if not isinstance(target.get("github_repo"), str):
+                raise ValueError("Each target must have a github_repo string")
+            if not isinstance(target.get("github_token"), str):
+                raise ValueError("Each target must have a github_token string")
+                
+        print("✅ Config validation successful")
+    except Exception as e:
+        print(f"❌ Config validation failed: {e}")
+        sys.exit(1)
 except Exception as e:
     print(f"❌ Config validation failed: {e}")
     sys.exit(1)

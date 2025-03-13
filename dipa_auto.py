@@ -15,14 +15,46 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 
-CONFIG_SCHEMA = zon.record({
-    "ipa_base_url": zon.string().url(),
-    "refresh_interval": zon.number().int().positive(),
-    "targets": zon.array(zon.record({
-        "github_token": zon.string().regex(r"^(gh[ps]_[a-zA-Z0-9]{36}|github_pat_[a-zA-Z0-9]{22}_[a-zA-Z0-9]{59})$"),
-        "github_repo": zon.string().regex(r"^[a-zA-Z0-9-]+/[a-zA-Z0-9-]+$")
-    })).min(1)
-})
+# Try to use array if available, fall back to list, or use a custom validator
+try:
+    CONFIG_SCHEMA = zon.record({
+        "ipa_base_url": zon.string().url(),
+        "refresh_interval": zon.number().int().positive(),
+        "targets": zon.array(zon.record({
+            "github_token": zon.string().regex(r"^(gh[ps]_[a-zA-Z0-9]{36}|github_pat_[a-zA-Z0-9]{22}_[a-zA-Z0-9]{59})$"),
+            "github_repo": zon.string().regex(r"^[a-zA-Z0-9-]+/[a-zA-Z0-9-]+$")
+        })).min(1)
+    })
+except AttributeError:
+    try:
+        CONFIG_SCHEMA = zon.record({
+            "ipa_base_url": zon.string().url(),
+            "refresh_interval": zon.number().int().positive(),
+            "targets": zon.list(zon.record({
+                "github_token": zon.string().regex(r"^(gh[ps]_[a-zA-Z0-9]{36}|github_pat_[a-zA-Z0-9]{22}_[a-zA-Z0-9]{59})$"),
+                "github_repo": zon.string().regex(r"^[a-zA-Z0-9-]+/[a-zA-Z0-9-]+$")
+            })).min(1)
+        })
+    except AttributeError:
+        # If neither array nor list methods are available, use a custom validator
+        class ConfigValidator:
+            def validate(self, data):
+                if not isinstance(data.get("ipa_base_url"), str):
+                    raise ValueError("ipa_base_url must be a string URL")
+                if not isinstance(data.get("refresh_interval"), int) or data["refresh_interval"] <= 0:
+                    raise ValueError("refresh_interval must be a positive integer")
+                if not isinstance(data.get("targets"), list) or len(data["targets"]) < 1:
+                    raise ValueError("targets must be an array with at least one item")
+                    
+                for target in data["targets"]:
+                    if not isinstance(target.get("github_repo"), str):
+                        raise ValueError("Each target must have a github_repo string")
+                    if not isinstance(target.get("github_token"), str):
+                        raise ValueError("Each target must have a github_token string")
+                        
+                return data
+        
+        CONFIG_SCHEMA = ConfigValidator()
 
 class DipaChecker:
     def __init__(self, mock_hash=None):
@@ -113,7 +145,7 @@ class DipaChecker:
             
             if current_hash != self.branch_hashes[branch]:
                 latest_version = self.get_latest_version(ipa_list)
-                if latest_version:
+                if (latest_version):
                     final_url = f"{self.base_url}/{branch}/{latest_version['name']}"
                     logging.info(f"New version found in {branch}: {final_url}")
                     
