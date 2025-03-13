@@ -45,7 +45,7 @@ import sys
 CONFIG_SCHEMA = zon.record({
     "ipa_base_url": zon.string().url(),
     "refresh_interval": zon.number().int().positive(),
-    "targets": zon.array(zon.record({
+    "targets": zon.list(zon.record({
         "github_token": zon.string().regex(r"^(gh[ps]_[a-zA-Z0-9]{36}|github_pat_[a-zA-Z0-9]{22}_[a-zA-Z0-9]{59})$"),
         "github_repo": zon.string().regex(r"^[a-zA-Z0-9-]+/[a-zA-Z0-9-]+$")
     })).min(1)
@@ -74,6 +74,7 @@ import requests
 import json
 import hashlib
 import tomli
+import os
 
 with open("$CONFIG_FILE", "rb") as f:
     config = tomli.load(f)
