@@ -2,7 +2,7 @@
 ipa_base_url = "https://ipa.aspy.dev/discord"
 
 # service configuration
-refresh_interval = 900 # 15 minutes
+refresh_schedule = "0,15,30,45 * * * *" # every quarter hour (00,15,30,45)
 
 # target repo configuration
 [[targets]]

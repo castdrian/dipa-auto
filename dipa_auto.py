@@ -9,6 +9,7 @@ import tomli
 import zon
 from datetime import datetime
 from pathlib import Path
+from croniter import croniter
 
 logging.basicConfig(
     level=logging.INFO,
@@ -19,7 +20,7 @@ logging.basicConfig(
 try:
     CONFIG_SCHEMA = zon.record({
         "ipa_base_url": zon.string().url(),
-        "refresh_interval": zon.number().int().positive(),
+        "refresh_schedule": zon.string().regex(r"^(\d+,)*\d+\s+(\d+,)*\d+|\*\s+(\d+,)*\d+|\*\s+(\d+,)*\d+|\*\s+(\d+,)*\d+|\*$"),
         "targets": zon.array(zon.record({
             "github_token": zon.string().regex(r"^(gh[ps]_[a-zA-Z0-9]{36}|github_pat_[a-zA-Z0-9]{22}_[a-zA-Z0-9]{59})$"),
             "github_repo": zon.string().regex(r"^[a-zA-Z0-9-]+/[a-zA-Z0-9-]+$")
@@ -29,7 +30,7 @@ except AttributeError:
     try:
         CONFIG_SCHEMA = zon.record({
             "ipa_base_url": zon.string().url(),
-            "refresh_interval": zon.number().int().positive(),
+            "refresh_schedule": zon.string().regex(r"^(\d+,)*\d+\s+(\d+,)*\d+|\*\s+(\d+,)*\d+|\*\s+(\d+,)*\d+|\*\s+(\d+,)*\d+|\*$"),
             "targets": zon.list(zon.record({
                 "github_token": zon.string().regex(r"^(gh[ps]_[a-zA-Z0-9]{36}|github_pat_[a-zA-Z0-9]{22}_[a-zA-Z0-9]{59})$"),
                 "github_repo": zon.string().regex(r"^[a-zA-Z0-9-]+/[a-zA-Z0-9-]+$")
@@ -41,10 +42,16 @@ except AttributeError:
             def validate(self, data):
                 if not isinstance(data.get("ipa_base_url"), str):
                     raise ValueError("ipa_base_url must be a string URL")
-                if not isinstance(data.get("refresh_interval"), int) or data["refresh_interval"] <= 0:
-                    raise ValueError("refresh_interval must be a positive integer")
+                if not isinstance(data.get("refresh_schedule"), str):
+                    raise ValueError("refresh_schedule must be a cron expression string")
                 if not isinstance(data.get("targets"), list) or len(data["targets"]) < 1:
                     raise ValueError("targets must be an array with at least one item")
+                    
+                # Validate cron expression
+                try:
+                    croniter(data["refresh_schedule"], datetime.now())
+                except Exception as e:
+                    raise ValueError(f"Invalid cron expression: {e}")
                     
                 for target in data["targets"]:
                     if not isinstance(target.get("github_repo"), str):
@@ -75,7 +82,7 @@ class DipaChecker:
             validated_config = CONFIG_SCHEMA.validate(config)
             
             self.base_url = validated_config["ipa_base_url"]
-            self.refresh_interval = validated_config["refresh_interval"]
+            self.refresh_schedule = validated_config["refresh_schedule"]
             self.targets = validated_config["targets"]
             
         except zon.error.ZonError as e:
@@ -172,7 +179,14 @@ class DipaChecker:
             self.check_branch("stable")
             self.check_branch("testflight")
             
-            time.sleep(self.refresh_interval)
+            # Calculate sleep time until next run based on cron schedule
+            now = datetime.now()
+            cron = croniter(self.refresh_schedule, now)
+            next_run = cron.get_next(datetime)
+            sleep_seconds = (next_run - now).total_seconds()
+            
+            logging.info(f"Next check scheduled at {next_run.strftime('%Y-%m-%d %H:%M:%S')} (in {sleep_seconds:.0f} seconds)")
+            time.sleep(sleep_seconds)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

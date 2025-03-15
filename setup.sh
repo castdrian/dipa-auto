@@ -34,13 +34,20 @@ fi
 python3 -m venv "$VENV_DIR"
 source "$VENV_DIR/bin/activate"
 
-pip install requests tomli zon
+pip install requests tomli zon croniter
 
 echo "📝 Validating config..."
 python3 << END
 import tomli
 import sys
 import os
+from datetime import datetime
+
+try:
+    from croniter import croniter
+except ImportError:
+    print("❌ Failed to import croniter. Make sure it's installed.")
+    sys.exit(1)
 
 # First check if we can import from dipa_auto
 try:
@@ -53,7 +60,6 @@ try:
     print("✅ Config validation successful")
 except ImportError:
     print("⚠️ Could not import schema from dipa_auto, using direct validation")
-    import zon
     
     try:
         with open("$CONFIG_FILE", "rb") as f:
@@ -62,8 +68,15 @@ except ImportError:
         # Basic validation without using specific zon methods
         if not isinstance(config.get("ipa_base_url"), str):
             raise ValueError("ipa_base_url must be a string")
-        if not isinstance(config.get("refresh_interval"), int) or config["refresh_interval"] <= 0:
-            raise ValueError("refresh_interval must be a positive integer")
+        if not isinstance(config.get("refresh_schedule"), str):
+            raise ValueError("refresh_schedule must be a cron expression string")
+            
+        # Validate cron expression
+        try:
+            croniter(config["refresh_schedule"], datetime.now())
+        except Exception as e:
+            raise ValueError(f"Invalid cron expression: {e}")
+            
         if not isinstance(config.get("targets"), list) or len(config["targets"]) < 1:
             raise ValueError("targets must be an array with at least one item")
             
