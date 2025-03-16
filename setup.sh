@@ -101,6 +101,37 @@ sudo chown -R $USER:$USER "$HASH_DIR"
 echo "📝 Checking branch hashes..."
 if [ -f "$HASH_DIR/branch_hashes.json" ]; then
     echo "✨ Using existing branch hashes"
+    
+    # Check if we need to migrate the hash format
+    python3 << END
+import json
+import os
+
+hash_file = "$HASH_DIR/branch_hashes.json"
+if os.path.exists(hash_file):
+    with open(hash_file) as f:
+        data = json.load(f)
+    
+    # Check if we need to migrate
+    needs_migration = False
+    for branch, value in data.items():
+        if isinstance(value, str) or not isinstance(value, dict):
+            needs_migration = True
+            break
+    
+    if needs_migration:
+        print("📝 Migrating hash format...")
+        new_data = {}
+        for branch, value in data.items():
+            if isinstance(value, str) or not isinstance(value, dict):
+                new_data[branch] = {"hash": value, "dispatched": []}
+            else:
+                new_data[branch] = value
+        
+        with open(hash_file, "w") as f:
+            json.dump(new_data, f)
+        print("✅ Hash format migration complete")
+END
 else
     echo "📝 Creating initial branch hashes..."
     python3 << END
@@ -124,8 +155,8 @@ def get_branch_hash(branch):
 # Only create hashes if they don't exist
 if not os.path.exists("$HASH_DIR/branch_hashes.json"):
     hashes = {
-        "stable": get_branch_hash("stable"),
-        "testflight": get_branch_hash("testflight")
+        "stable": {"hash": get_branch_hash("stable"), "dispatched": []},
+        "testflight": {"hash": get_branch_hash("testflight"), "dispatched": []}
     }
     with open("$HASH_DIR/branch_hashes.json", "w") as f:
         json.dump(hashes, f)
