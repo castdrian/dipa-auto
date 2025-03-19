@@ -97,11 +97,11 @@ class DipaChecker:
             with open(self.hash_file) as f:
                 self.branch_hashes = json.load(f)
                 if self.mock_hash:
-                    self.branch_hashes["stable"] = self.mock_hash
+                    self.branch_hashes["stable"] = {"hash": self.mock_hash, "dispatches": {}}
         else:
             self.branch_hashes = {
-                "stable": {"hash": None, "dispatched": []},
-                "testflight": {"hash": None, "dispatched": []}
+                "stable": {"hash": None, "dispatches": {}},
+                "testflight": {"hash": None, "dispatches": {}}
             }
 
     def fetch_ipa_list(self, branch):
@@ -125,19 +125,20 @@ class DipaChecker:
         successful_dispatches = []
         failed_dispatches = []
 
-        # Check which repositories were already dispatched for this hash
-        already_dispatched = self.branch_hashes[branch].get("dispatched", [])
+        # Get branch-specific dispatch history
+        branch_data = self.branch_hashes.get(branch, {"hash": None, "dispatches": {}})
+        dispatches = branch_data.get("dispatches", {})
         
         for target in self.targets:
             repo = target['github_repo']
             
-            # Skip if already successfully dispatched for this hash
-            if repo in already_dispatched:
-                logging.info(f"Skipping {repo} - already dispatched for current version")
+            # Skip if already successfully dispatched for this hash and branch
+            if repo in dispatches.get(current_hash, []):
+                logging.info(f"Skipping {repo} for {branch} - already dispatched for current version")
                 successful_dispatches.append(repo)
                 continue
                 
-            logging.info(f"Dispatching workflow for {ipa_url} to {repo}")
+            logging.info(f"Dispatching workflow for {branch} update {ipa_url} to {repo}")
             try:
                 response = requests.post(
                     f"https://api.github.com/repos/{repo}/dispatches",
@@ -161,27 +162,35 @@ class DipaChecker:
                     except:
                         error_details = response.text[:200]
                         
-                    logging.error(f"Failed to dispatch workflow to {repo}: Status {response.status_code}, Details: {error_details}")
+                    logging.error(f"Failed to dispatch {branch} workflow to {repo}: Status {response.status_code}, Details: {error_details}")
                     failed_dispatches.append(repo)
                 else:
+                    logging.info(f"Successfully dispatched {branch} workflow to {repo}")
                     successful_dispatches.append(repo)
                     
             except Exception as e:
-                logging.error(f"Error dispatching to {repo}: {str(e)}")
+                logging.error(f"Error dispatching {branch} to {repo}: {str(e)}")
                 failed_dispatches.append(repo)
                 
         # Return results
         return {
             "success": len(failed_dispatches) == 0,
             "successful": successful_dispatches,
-            "failed": failed_dispatches
+            "failed": failed_dispatches,
+            "hash": current_hash
         }
 
     def check_branch(self, branch):
         logging.info(f"Checking {branch} branch...")
         try:
             ipa_list, current_hash = self.fetch_ipa_list(branch)
-            stored_hash = self.branch_hashes[branch].get("hash", None)
+            
+            # Ensure branch exists in hash structure
+            if branch not in self.branch_hashes:
+                self.branch_hashes[branch] = {"hash": None, "dispatches": {}}
+                
+            branch_data = self.branch_hashes[branch]
+            stored_hash = branch_data.get("hash")
             
             if current_hash != stored_hash:
                 latest_version = self.get_latest_version(ipa_list)
@@ -193,27 +202,35 @@ class DipaChecker:
                     
                     # Update hash and dispatched repositories even if some failed
                     if dispatch_result["successful"]:
-                        # Create proper structure if it doesn't exist
-                        if isinstance(self.branch_hashes[branch], str) or not isinstance(self.branch_hashes[branch], dict):
-                            self.branch_hashes[branch] = {"hash": None, "dispatched": []}
+                        # Initialize the branch structure properly if needed
+                        if not isinstance(branch_data, dict):
+                            branch_data = {"hash": None, "dispatches": {}}
                             
-                        self.branch_hashes[branch]["hash"] = current_hash
+                        # Update the current hash
+                        branch_data["hash"] = current_hash
                         
-                        # Initialize or update the dispatched list
-                        if "dispatched" not in self.branch_hashes[branch]:
-                            self.branch_hashes[branch]["dispatched"] = []
-                            
-                        # Add successfully dispatched repos to the list
-                        self.branch_hashes[branch]["dispatched"] = list(set(
-                            self.branch_hashes[branch]["dispatched"] + dispatch_result["successful"]
+                        # Initialize or update the dispatches dictionary
+                        if "dispatches" not in branch_data:
+                            branch_data["dispatches"] = {}
+                        
+                        # Ensure current hash has an entry
+                        if current_hash not in branch_data["dispatches"]:
+                            branch_data["dispatches"][current_hash] = []
+                        
+                        # Track successfully dispatched repos for this hash
+                        branch_data["dispatches"][current_hash] = list(set(
+                            branch_data["dispatches"][current_hash] + dispatch_result["successful"]
                         ))
+                        
+                        # Update the branch data
+                        self.branch_hashes[branch] = branch_data
                         
                         self.save_hashes()
                         logging.info(f"Updated hash for {branch} and tracked {len(dispatch_result['successful'])} successful dispatches")
                     
                     if dispatch_result["failed"]:
-                        logging.warning(f"Failed to dispatch to {len(dispatch_result['failed'])} repositories: {', '.join(dispatch_result['failed'])}")
-                        # We still return True because we've handled the failures
+                        logging.warning(f"Failed to dispatch {branch} to {len(dispatch_result['failed'])} repositories: {', '.join(dispatch_result['failed'])}")
+                        # We still return success because we've handled the failures
                         return True
             else:
                 logging.info(f"No changes detected in {branch}")

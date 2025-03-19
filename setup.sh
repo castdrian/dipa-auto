@@ -115,7 +115,8 @@ if os.path.exists(hash_file):
     # Check if we need to migrate
     needs_migration = False
     for branch, value in data.items():
-        if isinstance(value, str) or not isinstance(value, dict):
+        # Check for old format (string or dict with dispatched array)
+        if isinstance(value, str) or (isinstance(value, dict) and "dispatched" in value):
             needs_migration = True
             break
     
@@ -123,9 +124,17 @@ if os.path.exists(hash_file):
         print("📝 Migrating hash format...")
         new_data = {}
         for branch, value in data.items():
-            if isinstance(value, str) or not isinstance(value, dict):
-                new_data[branch] = {"hash": value, "dispatched": []}
+            if isinstance(value, str):
+                # Old format with just the hash as a string
+                new_data[branch] = {"hash": value, "dispatches": {}}
+            elif isinstance(value, dict) and "dispatched" in value:
+                # Old format with 'dispatched' array
+                new_data[branch] = {
+                    "hash": value.get("hash"),
+                    "dispatches": {value.get("hash", ""): value.get("dispatched", [])} if value.get("hash") else {}
+                }
             else:
+                # Already in the new format or unknown format
                 new_data[branch] = value
         
         with open(hash_file, "w") as f:
@@ -155,8 +164,8 @@ def get_branch_hash(branch):
 # Only create hashes if they don't exist
 if not os.path.exists("$HASH_DIR/branch_hashes.json"):
     hashes = {
-        "stable": {"hash": get_branch_hash("stable"), "dispatched": []},
-        "testflight": {"hash": get_branch_hash("testflight"), "dispatched": []}
+        "stable": {"hash": get_branch_hash("stable"), "dispatches": {}},
+        "testflight": {"hash": get_branch_hash("testflight"), "dispatches": {}}
     }
     with open("$HASH_DIR/branch_hashes.json", "w") as f:
         json.dump(hashes, f)
