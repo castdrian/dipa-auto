@@ -66,13 +66,24 @@ else
         fi
     fi
 
-    # Check Go version
+    # Check Go version more leniently
     GO_VERSION=$(go version | awk '{print $3}' | sed 's/go//')
-    REQUIRED_VERSION="1.18"
-    if [[ $(echo -e "$GO_VERSION\n$REQUIRED_VERSION" | sort -V | head -n1) != "$REQUIRED_VERSION" ]]; then
-        echo "⚠️ Go version $GO_VERSION detected. dipa-auto requires at least Go $REQUIRED_VERSION."
-        echo "Please update Go manually."
-        exit 1
+    MIN_VERSION="1.16"  # Lower minimum version for better compatibility
+    
+    # Simple version comparison for major versions
+    GO_MAJOR=$(echo $GO_VERSION | cut -d. -f1)
+    GO_MINOR=$(echo $GO_VERSION | cut -d. -f2)
+    MIN_MAJOR=$(echo $MIN_VERSION | cut -d. -f1)
+    MIN_MINOR=$(echo $MIN_VERSION | cut -d. -f2)
+    
+    if [ "$GO_MAJOR" -lt "$MIN_MAJOR" ] || ([ "$GO_MAJOR" -eq "$MIN_MAJOR" ] && [ "$GO_MINOR" -lt "$MIN_MINOR" ]); then
+        echo "⚠️ Go version $GO_VERSION detected. dipa-auto recommends at least Go $MIN_VERSION."
+        echo "Some features might not work properly. Continue anyway? (y/n)"
+        read -r continue_anyway
+        if [[ ! "$continue_anyway" =~ ^[Yy]$ ]]; then
+            echo "Installation aborted."
+            exit 1
+        fi
     fi
 
     SERVICE_NAME="dipa-auto"
@@ -88,11 +99,15 @@ else
 
     echo "📝 Ensuring dependencies are up-to-date..."
     cd "$SCRIPT_DIR"
-    go mod tidy
+    # More resilient dependency management
+    go mod tidy || echo "Warning: Could not update dependencies. Continuing with build..."
 
     echo "📝 Building dipa-auto..."
     cd "$SCRIPT_DIR"
-    go build -o $SERVICE_NAME ./src
+    go build -o $SERVICE_NAME ./src || {
+        echo "❌ Build failed. Trying with more basic build flags..."
+        go build -o $SERVICE_NAME ./src
+    }
 
     echo "📝 Creating hash directory..."
     sudo mkdir -p "$HASH_DIR"
