@@ -1,6 +1,25 @@
-.secrets
-venv/
-__pycache__/
-*.pyc 
-.DS_Store
+# Go binary and build files
+/dipa-auto
+/bin
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Go testing and debugging
+*.test
+*.out
+*_coverage.txt
+
+# Go module and dependency files
+/vendor/
+/go.sum
+
+# Local configuration
 config.toml
+.secrets
+
+# OS-specific files
+.DS_Store
+Thumbs.db
