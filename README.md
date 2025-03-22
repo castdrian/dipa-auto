@@ -44,12 +44,6 @@ docker compose up -d
 docker compose logs -f
 ```
 
-The Docker setup includes:
-- Automatic initialization and configuration
-- Hash file migration (if upgrading from previous versions)
-- Persistent storage for tracking dispatched updates
-- Healthcheck to ensure the service is running properly
-
 ## Migrating from standard to Docker
 
 If you're moving from a standard installation to Docker:
