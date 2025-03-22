@@ -86,6 +86,10 @@ else
         exit 1
     fi
 
+    echo "📝 Ensuring dependencies are up-to-date..."
+    cd "$SCRIPT_DIR"
+    go mod tidy
+
     echo "📝 Building dipa-auto..."
     cd "$SCRIPT_DIR"
     go build -o $SERVICE_NAME ./src

@@ -1,9 +1,10 @@
 FROM golang:1.21-alpine AS builder
 WORKDIR /app
 COPY go.mod ./
-RUN go mod download
+RUN go mod download || echo "Downloading dependencies during build"
 COPY src/ ./src/
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags="-w -s" -o dipa-auto ./src
+RUN go mod tidy && \
+    CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags="-w -s" -o dipa-auto ./src
 
 FROM alpine:3.19
 RUN apk --no-cache add ca-certificates tzdata
