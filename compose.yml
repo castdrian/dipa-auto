@@ -1,0 +1,23 @@
+services:
+  dipa-auto:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: dipa-auto
+    restart: unless-stopped
+    volumes:
+      - ./config.toml:/app/config.toml:ro      
+      - dipa-data:/var/lib/dipa-auto
+      # Optional: for migrating from standard setup, uncomment to mount existing hash directory
+      # - /var/lib/dipa-auto:/var/lib/dipa-auto
+    environment:
+      - CONFIG_PATH=/app/config.toml
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  dipa-data:
+    driver: local

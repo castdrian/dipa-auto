@@ -1,0 +1,34 @@
+# Binary
+/dipa-auto
+
+# Config
+/config.toml
+
+# Git
+.git
+.gitignore
+
+# Go build files
+/bin
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+*_coverage.txt
+
+# Python files (from the old version)
+venv/
+__pycache__/
+*.pyc
+
+# macOS files
+.DS_Store
+
+# Local data
+/var/lib/dipa-auto
+
+# Miscellaneous
+README.md
