@@ -36,12 +36,12 @@ func main() {
 	}
 
 	// Set up cron scheduler
-	var c *cron.Cron
+	c := cron.New()
 	
-	// Standard cron (no seconds field)
-	c = cron.New()
-	
-	_, err = c.AddFunc(cfg.RefreshSchedule, func() {
+	// Define the check function without referencing entryID yet
+	checkFunc := func() {
+		log.Println("Starting scheduled check...")
+		
 		// Check both branches
 		if err := dipaChecker.CheckBranch("stable"); err != nil {
 			log.Printf("Error checking stable branch: %v", err)
@@ -53,29 +53,29 @@ func main() {
 		if err := dipaChecker.CheckBranch("testflight"); err != nil {
 			log.Printf("Error checking testflight branch: %v", err)
 		}
-	})
+		
+		// Log next scheduled run
+		entries := c.Entries()
+		if len(entries) > 0 {
+			nextRun := entries[0].Next
+			log.Printf("Check complete. Next run scheduled at: %s", nextRun.Format(time.RFC1123))
+		}
+	}
 	
+	// Add the function to the scheduler
+	entryID, err := c.AddFunc(cfg.RefreshSchedule, checkFunc)
 	if err != nil {
 		log.Fatalf("Failed to schedule cron job: %v", err)
 	}
 	
 	// Start the scheduler
 	c.Start()
+	
+	// Display the next scheduled run
+	entry := c.Entry(entryID)
+	nextRun := entry.Next
 	log.Printf("Scheduler started with cron expression: %s", cfg.RefreshSchedule)
-
-	// Run an initial check immediately
-	go func() {
-		log.Println("Performing initial check...")
-		if err := dipaChecker.CheckBranch("stable"); err != nil {
-			log.Printf("Error during initial stable check: %v", err)
-		}
-		
-		time.Sleep(5 * time.Second)
-		
-		if err := dipaChecker.CheckBranch("testflight"); err != nil {
-			log.Printf("Error during initial testflight check: %v", err)
-		}
-	}()
+	log.Printf("Next check scheduled at: %s", nextRun.Format(time.RFC1123))
 
 	// Set up signal handling for graceful shutdown
 	sigCh := make(chan os.Signal, 1)

@@ -2,7 +2,7 @@
 
 A Go service that monitors Discord ipa releases and triggers automated workflows.
 
-![screenshot](https://adriancastro.dev/s347b2zng5g6.png)
+![screenshot](https://adriancastro.dev/ckub2u8o8sbs.png)
 
 ## Features
 
@@ -69,36 +69,6 @@ volumes:
 3. Start with Docker Compose:
 ```sh
 docker compose up -d
-```
-
-## Requirements
-
-### For Standard Installation
-- Go 1.18 or higher
-- Linux system with systemd
-
-### For Docker Installation
-- Docker and Docker Compose
-
-## Configuration
-
-Example configuration (config.toml):
-
-```toml
-# ipa service configuration
-ipa_base_url = "https://ipa.example.com"
-
-# service configuration
-refresh_schedule = "0,15,30,45 * * * *" # every quarter hour (00,15,30,45)
-
-# target repo configuration
-[[targets]]
-github_repo = "user/repo"
-github_token = "github_pat_..."
-
-[[targets]]
-github_repo = "org/repo"
-github_token = "github_pat_..."
 ```
 
 ## License

@@ -65,7 +65,7 @@ func NewChecker(cfg *Config) (*DipaChecker, error) {
 	return checker, nil
 }
 
-// InitHashFile initializes the hash file - either loads existing one, migrates old format, or creates new
+// InitHashFile initializes the hash file - either loads existing one or creates new
 func (c *DipaChecker) InitHashFile() error {
 	// Check if the file exists
 	if _, err := os.Stat(c.HashFile); os.IsNotExist(err) {
@@ -83,88 +83,25 @@ func (c *DipaChecker) InitHashFile() error {
 		return c.SaveHashes()
 	}
 	
-	// Try to load the file
+	// File exists, load it
 	err := c.LoadHashes()
 	if err != nil {
 		return fmt.Errorf("failed to load hash file: %w", err)
 	}
 	
-	// Check if BranchData.Branches exists
-	if len(c.BranchData.Branches) == 0 {
-		log.Printf("Old hash file format detected, migrating...")
-		
-		// Temporary data to preserve old hashes
-		oldData := make(map[string]interface{})
-		
-		// Read the raw file contents
-		fileData, err := os.ReadFile(c.HashFile)
-		if err != nil {
-			return fmt.Errorf("failed to read hash file for migration: %w", err)
+	// Make sure both branches exist
+	if _, ok := c.BranchData.Branches["stable"]; !ok {
+		c.BranchData.Branches["stable"] = BranchData{
+			Hash:      "",
+			Dispatches: make(map[string][]string),
 		}
-		
-		if err := json.Unmarshal(fileData, &oldData); err != nil {
-			return fmt.Errorf("failed to parse old hash file format: %w", err)
+	}
+	
+	if _, ok := c.BranchData.Branches["testflight"]; !ok {
+		c.BranchData.Branches["testflight"] = BranchData{
+			Hash:      "",
+			Dispatches: make(map[string][]string),
 		}
-		
-		// Create new structure with branches
-		newData := BranchHashes{
-			Branches: make(map[string]BranchData),
-		}
-		
-		// Migrate each branch
-		for branch, data := range oldData {
-			switch v := data.(type) {
-			case string:
-				// Old format with just a hash string
-				newData.Branches[branch] = BranchData{
-					Hash:      v,
-					Dispatches: make(map[string][]string),
-				}
-			case map[string]interface{}:
-				// Format with hash and maybe dispatched array
-				hash, _ := v["hash"].(string)
-				newBranchData := BranchData{
-					Hash:      hash,
-					Dispatches: make(map[string][]string),
-				}
-				
-				// If there's a "dispatched" array, convert it
-				if dispatched, ok := v["dispatched"].([]interface{}); ok && hash != "" {
-					newBranchData.Dispatches[hash] = make([]string, 0)
-					for _, repo := range dispatched {
-						if repoStr, ok := repo.(string); ok {
-							newBranchData.Dispatches[hash] = append(newBranchData.Dispatches[hash], repoStr)
-						}
-					}
-				}
-				
-				newData.Branches[branch] = newBranchData
-			}
-		}
-		
-		// Make sure stable and testflight exist
-		if _, ok := newData.Branches["stable"]; !ok {
-			newData.Branches["stable"] = BranchData{
-				Hash:      "",
-				Dispatches: make(map[string][]string),
-			}
-		}
-		
-		if _, ok := newData.Branches["testflight"]; !ok {
-			newData.Branches["testflight"] = BranchData{
-				Hash:      "",
-				Dispatches: make(map[string][]string),
-			}
-		}
-		
-		// Save backup of old file
-		os.Rename(c.HashFile, c.HashFile+".backup")
-		
-		// Update the data
-		c.BranchData = newData
-		
-		// Save the new format
-		return c.SaveHashes()
 	}
 	
 	return nil

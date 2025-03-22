@@ -18,22 +18,8 @@ if [ -f "/.dockerenv" ] || grep -q docker /proc/1/cgroup 2>/dev/null; then
         exit 1
     fi
 
-    # Handle hash file migration
-    if [ -f "$HASH_DIR/branch_hashes.json" ]; then
-        echo "🔍 Checking if branch hashes need migration..."
-        
-        # Check if JSON already has the new format
-        if ! grep -q '"branches"' "$HASH_DIR/branch_hashes.json"; then
-            echo "🔄 Migrating hash file format..."
-            cp "$HASH_DIR/branch_hashes.json" "$HASH_DIR/branch_hashes.backup.json"
-            
-            # Initialize with new format
-            echo '{"branches":{"stable":{"hash":"","dispatches":{}},"testflight":{"hash":"","dispatches":{}}}}' > "$HASH_DIR/branch_hashes.json"
-            echo "✅ Hash file migration complete"
-        else
-            echo "✅ Hash file already in current format"
-        fi
-    else
+    # Initialize hash file if it doesn't exist
+    if [ ! -f "$HASH_DIR/branch_hashes.json" ]; then
         echo "📝 Creating initial branch hashes file..."
         echo '{"branches":{"stable":{"hash":"","dispatches":{}},"testflight":{"hash":"","dispatches":{}}}}' > "$HASH_DIR/branch_hashes.json"
     fi
@@ -101,6 +87,12 @@ else
     cd "$SCRIPT_DIR"
     # More resilient dependency management
     go mod tidy || echo "Warning: Could not update dependencies. Continuing with build..."
+
+    # Check if service is running and stop it if it is
+    if systemctl is-active --quiet $SERVICE_NAME; then
+        echo "🛑 Stopping running $SERVICE_NAME service..."
+        sudo systemctl stop $SERVICE_NAME
+    fi
 
     echo "📝 Building dipa-auto..."
     cd "$SCRIPT_DIR"
