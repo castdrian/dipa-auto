@@ -89,12 +89,8 @@ func (c *DipaChecker) InitHashFile() error {
 		return fmt.Errorf("failed to load hash file: %w", err)
 	}
 	
-	// Check if we need to migrate from old format
-	needsMigration := false
-	
 	// Check if BranchData.Branches exists
 	if len(c.BranchData.Branches) == 0 {
-		needsMigration = true
 		log.Printf("Old hash file format detected, migrating...")
 		
 		// Temporary data to preserve old hashes
