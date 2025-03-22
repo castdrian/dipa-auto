@@ -12,15 +12,6 @@ import (
 )
 
 func main() {
-	// Parse flags early
-	flag.Parse()
-
-	// Check if we should run in debug mode
-	if len(os.Args) > 1 && os.Args[1] == "debug" {
-		DebugHashFile()
-		return
-	}
-
 	log.Println("Starting dipa-auto...")
 
 	// Load configuration
