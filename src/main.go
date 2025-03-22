@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -36,7 +37,10 @@ func main() {
 	}
 
 	// Set up cron scheduler
-	c := cron.New(cron.WithSeconds())
+	var c *cron.Cron
+	
+	// Standard cron (no seconds field)
+	c = cron.New()
 	
 	_, err = c.AddFunc(cfg.RefreshSchedule, func() {
 		// Check both branches
@@ -55,7 +59,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to schedule cron job: %v", err)
 	}
-
+	
 	// Start the scheduler
 	c.Start()
 	log.Printf("Scheduler started with cron expression: %s", cfg.RefreshSchedule)

@@ -2,6 +2,7 @@
 ipa_base_url = "https://ipa.aspy.dev/discord"
 
 # service configuration
+# Standard cron format (minute, hour, day_of_month, month, day_of_week)
 refresh_schedule = "0,15,30,45 * * * *" # every quarter hour (00,15,30,45)
 
 # target repo configuration
